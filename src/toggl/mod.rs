@@ -20,7 +20,7 @@ pub async fn retrieve_entries(
     client: &Client,
     username: String,
     password: String,
-    since_unix_secs: u64,
+    since_unix_secs: i64,
 ) -> anyhow::Result<Vec<TimeEntry>> {
     let available_entries = client
         .request(
@@ -35,5 +35,5 @@ pub async fn retrieve_entries(
         .json::<Vec<TimeEntry>>()
         .await?;
 
-    return Ok(available_entries);
+    Ok(available_entries)
 }

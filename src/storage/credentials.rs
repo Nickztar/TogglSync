@@ -15,7 +15,9 @@ const CRED_FILE: &str = "toggl_sync.bin";
 pub fn retrieve_credentials() -> anyhow::Result<Credentials> {
     let existing = load_file::<Credentials,_>(CRED_FILE, 0);
 
-    if let Ok(credentials) = existing {
+    let use_existing_creds = Confirm::new("Found existing credentials, should I use them? (y/n)");
+
+    if let Ok(credentials) = existing && use_existing_creds.prompt()? {
         //TODO: Decrypt pls
         return Ok(credentials);
     }
@@ -41,5 +43,5 @@ pub fn retrieve_credentials() -> anyhow::Result<Credentials> {
         println!("Ok, I will not save them!");
     }
 
-    return Ok(credentials)
+    Ok(credentials)
 }

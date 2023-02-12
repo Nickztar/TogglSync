@@ -16,4 +16,7 @@ savefile="0.12"
 savefile-derive="0.12"
 humantime = "2.1.0"
 chrono = "0.4.23"
-inquire = "0.5.3"
+inquire = { version = "0.5.3", features = ["date"] }
+colored = "2.0.0"
+regex = "1.7.1"
+lazy_static = "1.4.0"

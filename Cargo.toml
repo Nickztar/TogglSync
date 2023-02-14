@@ -19,3 +19,4 @@ inquire = { version = "0.5.3", features = ["date"] }
 colored = "2.0.0"
 regex = "1.7.1"
 lazy_static = "1.4.0"
+clap = { version = "4.1.4", features = ["derive"] }

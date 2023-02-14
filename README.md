@@ -1,13 +1,15 @@
-# Toggle Sync
+# Sync Toggl to Tempo
+
+![Screenshot of help](/screenshot.png)
 
 TODO:
-[x] Group like Toggl
-[x] Fix autocomplete to include descriptions
-[] Rounding
-[] Validate entered keys against regex
-[] Allow cleaning up previous keys
-[] Setup installation
-[] Organize code better
-[] Fast-mode (Don't ask for every entry) 
-[] Handle failing api keys
-[] Handle failure response when posting to Tempo
+- [x] Group like Toggl
+- [x] Fix autocomplete to include descriptions
+- [x] Allow cleaning up previous keys
+- [ ] Fast-mode (Don't ask for every entry) 
+- [ ] Encrypt credential files?
+- [ ] Validate entered keys against regex
+- [ ] Setup installation
+- [ ] Organize code better
+- [ ] Handle failing api keys
+- [ ] Handle failure response when posting to Tempo

@@ -1,5 +1,8 @@
+use std::fs::remove_file;
+
 use inquire::{Confirm, Password, Text};
 use savefile::{load_file, save_file};
+use savefile_derive::Savefile;
 
 #[derive(Savefile, Debug)]
 pub struct Credentials {
@@ -14,9 +17,7 @@ const CRED_FILE: &str = "toggl_sync.bin";
 pub fn retrieve_credentials() -> anyhow::Result<Credentials> {
     let existing = load_file::<Credentials, _>(CRED_FILE, 0);
 
-    let use_existing_creds = Confirm::new("Found existing credentials, should I use them? (y/n)");
-
-    if let Ok(credentials) = existing && use_existing_creds.prompt()? {
+    if let Ok(credentials) = existing {
         //TODO: Decrypt pls
         return Ok(credentials);
     }
@@ -45,4 +46,9 @@ pub fn retrieve_credentials() -> anyhow::Result<Credentials> {
     }
 
     Ok(credentials)
+}
+
+pub fn clear_credentials() -> anyhow::Result<()> {
+    remove_file(CRED_FILE)?;
+    Ok(())
 }

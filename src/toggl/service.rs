@@ -79,6 +79,7 @@ pub fn merge_filter_entries(entries: Vec<TimeEntry>) -> Vec<MergedEntry> {
     merged_entries
 }
 
+#[allow(dead_code)]
 pub async fn try_tag_entries(
     client: &Client,
     username: String,

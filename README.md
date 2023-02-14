@@ -1,9 +1,12 @@
 # Toggle Sync
 
 TODO:
+[x] Group like Toggl
+[x] Fix autocomplete to include descriptions
+[] Rounding
+[] Validate entered keys against regex
+[] Allow cleaning up previous keys
 [] Setup installation
-[] Group like Toggl
-[] Fix autocomplete to include descriptions
 [] Organize code better
 [] Fast-mode (Don't ask for every entry) 
 [] Handle failing api keys

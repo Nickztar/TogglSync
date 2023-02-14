@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use chrono::{DateTime, FixedOffset};
+use chrono::{DateTime, FixedOffset, Utc};
 use serde::{Deserialize, Serialize, Deserializer};
 #[derive(Deserialize, Debug)]
 pub struct TimeEntry {
@@ -16,6 +16,15 @@ pub struct TimeEntry {
     pub stop: Option<String>,
     pub server_deleted_at: Option<String>,
     pub tags: Option<HashSet<String>>,
+}
+
+pub struct MergedEntry {
+    pub user_id: i64,
+    pub workspace_id: i64,
+    pub duration: i64,
+    pub description: String,
+    pub start: DateTime<Utc>,
+    pub tags: Vec<(i64, Option<HashSet<String>>)>
 }
 
 fn date_time_from_str<'de, D>(deserializer: D) -> Result<Option<DateTime<FixedOffset>>, D::Error>

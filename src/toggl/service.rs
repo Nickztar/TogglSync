@@ -1,9 +1,9 @@
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 
-use chrono::{Days, NaiveDate};
+use chrono::{DateTime, Days, NaiveDate, Utc};
 use reqwest::{header::CONTENT_TYPE, Client, Method};
 
-use super::structs::{BatchRequest, TagEntry, TimeEntry};
+use super::structs::{BatchRequest, MergedEntry, TagEntry, TimeEntry};
 
 const TIME_URL: &str = "https://api.track.toggl.com/api/v9/me/time_entries";
 const BATCH_URL: &str =
@@ -35,34 +35,56 @@ pub async fn retrieve_entries(
     Ok(available_entries)
 }
 
-// pub fn merge_filter_entries(entries: Vec<TimeEntry>) {
-//     let grouped_entries: BTreeMap<String, Vec<TimeEntry>> =
-//         entries
-//             .into_iter()
-//             .fold(BTreeMap::new(), |mut acc, entry| {
-//                 //Filter out deleted and non-finished entries
-//                 if entry.duration.is_positive() && entry.server_deleted_at.is_none() {
-//                     //Merge on description (TODO: Maybe also merge on projects/tags etc, just like toggl)
-//                     acc.entry(entry.description.to_string())
-//                         .or_default()
-//                         .push(entry);
-//                 }
-//                 acc
-//             });
-//     let mut merged_entries: Vec<TimeEntry> = Vec::new();
-//     for (key, group) in grouped_entries {
-//         //Add together times
-//         //Take earliest date
-//         //Possibly want 
-//     }
-// }
+pub fn merge_filter_entries(entries: Vec<TimeEntry>) -> Vec<MergedEntry> {
+    let grouped_entries: BTreeMap<String, Vec<TimeEntry>> =
+        entries.into_iter().fold(BTreeMap::new(), |mut acc, entry| {
+            //Filter out deleted and non-finished entries
+            if entry.duration.is_positive() && entry.server_deleted_at.is_none() {
+                //Merge on description (TODO: Maybe also merge on projects/tags etc, just like toggl)
+                acc.entry(entry.description.to_string())
+                    .or_default()
+                    .push(entry);
+            }
+            acc
+        });
+    let mut merged_entries: Vec<MergedEntry> = Vec::new();
+    for (description, group) in grouped_entries {
+        let first = group.get(0);
+        if let Some(first_entry) = first {
+            let group_len = group.len();
+            let mut tags: Vec<_> = Vec::with_capacity(group_len);
+            let mut start_time: DateTime<Utc> = Utc::now();
+            let mut duration = 0i64;
+            for entry in group.iter() {
+                duration += entry.duration;
+                tags.push((entry.id, entry.tags.clone()));
+                if let Some(start) = entry.start {
+                    start_time = start_time.min(start.with_timezone(&Utc))
+                }
+            }
+            let merged = MergedEntry {
+                user_id: first_entry.user_id,
+                workspace_id: first_entry.workspace_id,
+                duration,
+                description,
+                start: start_time,
+                tags,
+            };
+            merged_entries.push(merged);
+        } else {
+            continue;
+        }
+    }
+
+    merged_entries
+}
 
 pub async fn try_tag_entries(
     client: &Client,
     username: String,
     password: String,
     entries: Vec<TimeEntry>,
-    new_tag: &str
+    new_tag: &str,
 ) -> anyhow::Result<()> {
     let workspace_id = entries.get(0).expect("Atleast one present").workspace_id;
     let time_entry_ids = entries

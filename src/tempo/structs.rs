@@ -1,4 +1,4 @@
-use chrono::{DateTime, FixedOffset};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 #[derive(Serialize, Debug)]
 pub struct Worklog {
@@ -14,7 +14,7 @@ pub struct Worklog {
     #[serde(rename = "timeSpentSeconds")]
     pub time_spent_seconds: u64,
     #[serde(skip_serializing)]
-    pub date: DateTime<FixedOffset>,
+    pub date: DateTime<Utc>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

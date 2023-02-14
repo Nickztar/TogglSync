@@ -5,18 +5,18 @@ use crate::{
         keys::{retreive_keys, store_keys},
     },
     tempo::service::{create_worklogs, datetime_to_date_and_time},
-    toggl::service::retrieve_entries,
+    toggl::{service::retrieve_entries, issue_completer::IssueCompleter},
 };
 use chrono::Weekday;
 use chrono::{DateTime, FixedOffset, Utc};
 use colored::Colorize;
 use humantime::format_duration;
-use inquire::{Confirm, CustomUserError, DateSelect, Text};
+use inquire::{Confirm, DateSelect, Text};
 use lazy_static::lazy_static;
 use regex::Regex;
 use reqwest::Client;
 use std::{
-    collections::{BTreeMap, HashSet},
+    collections::BTreeMap,
     time::Duration,
 };
 use tempo::structs::Worklog;
@@ -54,7 +54,7 @@ async fn main() -> anyhow::Result<()> {
         selected_date,
     )
     .await?;
-    dbg!(&available_entries);
+
     println!("Found {} Toggl entries", available_entries.len().to_string().blue().underline());
     
     //TODO: Check which entries are already in tempo
@@ -82,8 +82,7 @@ async fn main() -> anyhow::Result<()> {
     {
         let curr_keys = available_keys.clone();
         let duration = Duration::from_secs(entry.duration as u64);
-        let start_string = entry.start.as_ref().unwrap();
-        let start_datetime = DateTime::parse_from_rfc3339(start_string)?;
+        let start_datetime = entry.start.as_ref().expect("All entries have starttimes");
         let (start_date, start_time) = datetime_to_date_and_time(start_datetime);
         let possible_key = RE.captures(&entry.description);
         if let Some(captures) = possible_key && let Some(key_match) = captures.get(0) {
@@ -94,15 +93,21 @@ async fn main() -> anyhow::Result<()> {
             let mut key = possible_key.to_string();
             if edit_requested {
                 key = Text::new("Key for this entry")
-                    .with_autocomplete(move |key: &str| key_suggestor(key.to_string(), &curr_keys))
+                    .with_autocomplete(IssueCompleter::new(curr_keys))
                     .with_default(possible_key)
                     .prompt()?;
                 desc = Text::new("Description for this entry")
                     .with_default(&desc)
                     .prompt()?;
             }
-            
-            available_keys.insert(key.to_string());
+            let key = clean_key(&key);
+            dbg!(&available_keys);
+            if !available_keys.contains_key(&key) {
+                let key_desc = Text::new(&format!("{}: is a new key, what is the description for it?", key.to_string().blue()))
+                    .with_default(&desc)
+                    .prompt()?;
+                available_keys.insert(key.to_string(), key_desc);
+            }
             let worklog = Worklog {
                 author_account_id: credentials.account_id.to_string(),
                 description: desc,
@@ -110,17 +115,30 @@ async fn main() -> anyhow::Result<()> {
                 start_date,
                 start_time,
                 time_spent_seconds: duration.as_secs(),
-                date: start_datetime,
+                date: *start_datetime,
             };
             accumulated_entries.push(worklog);
         } else {
+            println!("Missing key! Desc: {}, Duration: {}", entry.description.red().underline(), 
+                format_duration(duration)
+                    .to_string()
+                    .blue()
+                    .underline()
+            );
             let new_key = Text::new("Key for this entry")
-                .with_autocomplete(move |key: &str| key_suggestor(key.to_string(), &curr_keys))
+                .with_autocomplete(IssueCompleter::new(curr_keys))
                 .prompt()?;
+            let new_key = clean_key(&new_key);
             let new_desc = Text::new("Description for this entry")
                 .with_default(&entry.description)
                 .prompt()?;
-            available_keys.insert(new_key.trim().to_string());
+            dbg!(&available_keys);
+            if !available_keys.contains_key(&new_key) {
+                let key_desc = Text::new(&format!("{} is a new key, what is the description for it?", new_key.blue()))
+                    .with_default(&new_desc)
+                    .prompt()?;
+                available_keys.insert(new_key.to_string(), key_desc);
+            }
             let worklog = Worklog {
                 author_account_id: credentials.account_id.to_string(),
                 description: new_desc.trim().to_string(),
@@ -128,7 +146,7 @@ async fn main() -> anyhow::Result<()> {
                 start_date,
                 start_time,
                 time_spent_seconds: duration.as_secs(),
-                date: start_datetime,
+                date: *start_datetime,
             };
             accumulated_entries.push(worklog);
         }
@@ -154,7 +172,7 @@ async fn main() -> anyhow::Result<()> {
             //Take the earliest start time
             let start_datetime: DateTime<FixedOffset> =
                 group.iter().map(|entry| entry.date).min().unwrap();
-            let (start_date, start_time) = datetime_to_date_and_time(start_datetime);
+            let (start_date, start_time) = datetime_to_date_and_time(&start_datetime);
             let merged_description = group
                 .iter()
                 .map(|entry| entry.description.to_string())
@@ -187,29 +205,14 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-// let possible_issue_key = entry.description.split_once(":");
-// if let Some((key, description)) = possible_issue_key && let Some(start_date) = entry.start && let Some(end_date) = entry.stop {
-//     let exists = worklogs.iter().find(|worklog| {
-//         worklog.issue.key == key && worklog.description == description && start_date == worklog.
-//     })
-// }
-
-/// This could be faster by using smarter ways to check for matches, when dealing with larger datasets.
-fn key_suggestor(
-    input: String,
-    keys: &HashSet<String>,
-) -> std::result::Result<Vec<String>, CustomUserError> {
-    let input = input.to_lowercase();
-
-    Ok(keys
-        .iter()
-        .filter(|p| p.to_lowercase().contains(&input))
-        .take(5)
-        .map(|p| String::from(p))
-        .collect())
-}
-
 fn clean_description(input: &str) -> String {
     let chars: &[_] = &[':', '-'];
     input.trim().trim_matches(chars).trim().to_string()
+}
+
+fn clean_key(input: &str) -> String {
+    match input.split_once(' ') {
+        Some((key, _)) => key.trim().to_string(),
+        None => input.trim().to_string(),
+    }
 }

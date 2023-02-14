@@ -35,11 +35,34 @@ pub async fn retrieve_entries(
     Ok(available_entries)
 }
 
+// pub fn merge_filter_entries(entries: Vec<TimeEntry>) {
+//     let grouped_entries: BTreeMap<String, Vec<TimeEntry>> =
+//         entries
+//             .into_iter()
+//             .fold(BTreeMap::new(), |mut acc, entry| {
+//                 //Filter out deleted and non-finished entries
+//                 if entry.duration.is_positive() && entry.server_deleted_at.is_none() {
+//                     //Merge on description (TODO: Maybe also merge on projects/tags etc, just like toggl)
+//                     acc.entry(entry.description.to_string())
+//                         .or_default()
+//                         .push(entry);
+//                 }
+//                 acc
+//             });
+//     let mut merged_entries: Vec<TimeEntry> = Vec::new();
+//     for (key, group) in grouped_entries {
+//         //Add together times
+//         //Take earliest date
+//         //Possibly want 
+//     }
+// }
+
 pub async fn try_tag_entries(
     client: &Client,
     username: String,
     password: String,
     entries: Vec<TimeEntry>,
+    new_tag: &str
 ) -> anyhow::Result<()> {
     let workspace_id = entries.get(0).expect("Atleast one present").workspace_id;
     let time_entry_ids = entries
@@ -52,7 +75,7 @@ pub async fn try_tag_entries(
         .map(|entry| {
             if let Some(existing_tags) = &entry.tags {
                 let mut tags = HashSet::new();
-                tags.insert("Synced".to_string());
+                tags.insert(new_tag.to_string());
                 for tag in existing_tags.iter() {
                     tags.insert(tag.to_string());
                 }
@@ -63,7 +86,7 @@ pub async fn try_tag_entries(
                 }
             } else {
                 let mut tags = HashSet::new();
-                tags.insert("Synced".to_string());
+                tags.insert(new_tag.to_string());
                 TagEntry {
                     value: tags,
                     op: "replace".to_string(),

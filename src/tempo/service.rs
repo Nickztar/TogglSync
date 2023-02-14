@@ -5,7 +5,7 @@ use reqwest::{Client, Method, Response, StatusCode};
 use super::structs::Worklog;
 const TEMPO_URL: &str = "https://api.tempo.io/core/3/worklogs";
 
-pub fn datetime_to_date_and_time(date: DateTime<FixedOffset>) -> (String, String) {
+pub fn datetime_to_date_and_time(date: &DateTime<FixedOffset>) -> (String, String) {
     let start_date = date.format("%Y-%m-%d").to_string();
     let start_time = date.format("%H:%M:%S").to_string();
     (start_date, start_time)
@@ -45,7 +45,7 @@ pub async fn create_worklog(client: &Client, token: String, work_log: Worklog) -
         .bearer_auth(token)
         .send()
         .await?;
-    
+    dbg!(&response);
     Ok(response)
 }
 

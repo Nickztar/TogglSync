@@ -13,3 +13,4 @@ TODO:
 - [ ] Organize code better
 - [ ] Handle failing api keys
 - [ ] Handle failure response when posting to Tempo
+- [ ] Import from JIRA

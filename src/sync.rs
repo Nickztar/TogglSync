@@ -1,4 +1,7 @@
-use std::{collections::HashMap, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    time::Duration,
+};
 
 use crate::{
     storage::{
@@ -21,7 +24,7 @@ use chrono::{Utc, Weekday};
 use colored::Colorize;
 use humantime::format_duration;
 use inquire::{Confirm, DateSelect, Text};
-use lazy_static::lazy_static;
+use lazy_static::{__Deref, lazy_static};
 use regex::Regex;
 use reqwest::Client;
 
@@ -108,16 +111,31 @@ pub async fn sync_toggle() -> anyhow::Result<()> {
     Ok(())
 }
 
+fn get_possible_key_tag(entry: &MergedEntry) -> Option<String> {
+    let tags = entry
+        .tags
+        .iter()
+        .filter(|x| x.tags.is_some())
+        .flat_map(|entry_tags| entry_tags.tags.as_ref().unwrap())
+        .collect::<HashSet<&String>>();
+    let possible_key = tags.iter().find(|tag| RE.is_match(tag));
+    if let Some(key) = possible_key {
+        Some(key.to_string())
+    } else {
+        None
+    }
+}
+
 fn get_key_desc(
     entry: &MergedEntry,
     curr_keys: HashMap<String, String>,
 ) -> anyhow::Result<(String, String)> {
     let possible_key = RE.captures(&entry.description);
-    let mut key: Option<String> = None;
-    let mut desc: String = entry.description.to_string();
+    let mut key: Option<String> = get_possible_key_tag(entry);
+    let mut desc: String = clean_description(RE.replace(&entry.description, "").deref());
     let duration = Duration::from_secs(entry.duration as u64);
     let edit_requested: bool;
-    if let Some(captures) = possible_key && let Some(key_match) = captures.get(0) {
+    if possible_key.is_none() && let Some(captures) = possible_key && let Some(key_match) = captures.get(0) {
         let possible_key = key_match.as_str();
         desc = clean_description(&entry.description.replace(key_match.as_str(), ""));
         key = Some(possible_key.to_string());

@@ -6,7 +6,7 @@ TODO:
 - [x] Group like Toggl
 - [x] Fix autocomplete to include descriptions
 - [x] Allow cleaning up previous keys
-- [ ] Handle entries that have tags
+- [x] Handle entries that have tags
 - [ ] Fix grouping to respect tags
 - [ ] Fast-mode (Don't ask for every entry) 
 - [ ] Encrypt credential files?

@@ -1,4 +1,3 @@
-
 pub fn clean_description(input: &str) -> String {
     let chars: &[_] = &[':', '-'];
     input.trim().trim_matches(chars).trim().to_string()

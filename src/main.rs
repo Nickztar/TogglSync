@@ -1,6 +1,12 @@
 #![feature(let_chains)]
 
-use crate::{sync::sync_toggle, storage::{keys::{filter_keys, add_key}, credentials::clear_credentials}};
+use crate::{
+    storage::{
+        credentials::clear_credentials,
+        keys::{add_key, filter_keys},
+    },
+    sync::sync_toggle,
+};
 use clap::{Parser, Subcommand};
 use colored::Colorize;
 
@@ -26,7 +32,7 @@ enum Command {
     AddKeys,
     /// - Go through the list of available keys and remove old ones
     FilterKeys,
-    /// - Remove the credentials files 
+    /// - Remove the credentials files
     ClearCredentials,
 }
 

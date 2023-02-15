@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use chrono::{DateTime, FixedOffset, Utc};
-use serde::{Deserialize, Serialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize};
 #[derive(Deserialize, Debug)]
 pub struct TimeEntry {
     pub id: i64,
@@ -24,7 +24,15 @@ pub struct MergedEntry {
     pub duration: i64,
     pub description: String,
     pub start: DateTime<Utc>,
-    pub tags: Vec<(i64, Option<HashSet<String>>)>
+    pub tags: Vec<EntryTag>,
+}
+
+#[derive(Clone)]
+pub struct EntryTag {
+    pub id: i64,
+    pub user_id: i64,
+    pub workspace_id: i64,
+    pub tags: Option<HashSet<String>>,
 }
 
 fn date_time_from_str<'de, D>(deserializer: D) -> Result<Option<DateTime<FixedOffset>>, D::Error>
@@ -40,12 +48,6 @@ where
 }
 
 #[derive(Serialize, Debug)]
-pub struct TagEntry {
-    pub op: String,
-    pub path: String,
-    pub value: HashSet<String>,
-}
-#[derive(Serialize, Debug)]
-pub struct BatchRequest {
-    pub array: Vec<TagEntry>,
+pub struct TagRequest {
+    pub tags: HashSet<String>,
 }

@@ -11,8 +11,8 @@ use crate::{
     },
     toggl::{
         issue_completer::IssueCompleter,
-        service::{merge_filter_entries, retrieve_entries},
-        structs::MergedEntry,
+        service::{merge_filter_entries, retrieve_entries, tag_entry},
+        structs::{EntryTag, MergedEntry},
     },
     utils::{clean_description, clean_key},
 };
@@ -39,8 +39,8 @@ pub async fn sync_toggle() -> anyhow::Result<()> {
     let client = Client::new();
     let available_entries = retrieve_entries(
         &client,
-        credentials.username,
-        credentials.password,
+        &credentials.username,
+        &credentials.password,
         selected_date,
     )
     .await?;
@@ -62,6 +62,7 @@ pub async fn sync_toggle() -> anyhow::Result<()> {
             .underline()
     );
     let mut accumulated_entries: Vec<Worklog> = Vec::new();
+    let mut entries_to_updated: Vec<(String, Vec<EntryTag>)> = Vec::new();
     for entry in merged_entries.iter() {
         let curr_keys = available_keys.clone();
         let duration = Duration::from_secs(entry.duration as u64);
@@ -77,16 +78,30 @@ pub async fn sync_toggle() -> anyhow::Result<()> {
         let worklog = Worklog {
             author_account_id: credentials.account_id.to_string(),
             description: desc,
-            issue_key: key,
+            issue_key: key.to_string(),
             start_date,
             start_time,
             time_spent_seconds: duration.as_secs(),
             date: start_datetime,
         };
         accumulated_entries.push(worklog);
+        entries_to_updated.push((key.to_string(), entry.tags.clone()));
     }
 
     let _failed = create_worklogs(credentials.tempo_token.to_string(), accumulated_entries).await?;
+    let client = Client::new();
+    for (key, tags) in entries_to_updated {
+        for entry in tags {
+            let _ = tag_entry(
+                &client,
+                &credentials.username,
+                &credentials.password,
+                entry,
+                &key,
+            )
+            .await;
+        }
+    }
     //TODO: Allow fixing these
     store_keys(available_keys)?;
 
@@ -101,7 +116,7 @@ fn get_key_desc(
     let mut key: Option<String> = None;
     let mut desc: String = entry.description.to_string();
     let duration = Duration::from_secs(entry.duration as u64);
-    let mut edit_requested = false;
+    let edit_requested: bool;
     if let Some(captures) = possible_key && let Some(key_match) = captures.get(0) {
         let possible_key = key_match.as_str();
         desc = clean_description(&entry.description.replace(key_match.as_str(), ""));
@@ -121,6 +136,7 @@ fn get_key_desc(
                 .with_autocomplete(IssueCompleter::new(curr_keys.clone()))
                 .prompt()?,
         );
+        edit_requested = Confirm::new("Edit? (y/n)").prompt()?;
     }
     if edit_requested {
         desc = Text::new("Description?").with_default(&desc).prompt()?;
